@@ -11,7 +11,6 @@ fn main() {
     // load env
     dotenv().ok();
 
-    
     let matches = App::new("My Super Program")
         .version("1.0")
         .author("xiaoyu xu. <xuxy@example.com>")
@@ -33,14 +32,14 @@ fn main() {
         let mut exe = IpExecutor{
             address: "".to_string(),
         };
-        exe.analyseMatch(&matches);
+        exe.analyse_match(&matches);
         exe.exe();
     }
 }
 
 
 trait Executor {
-    fn analyseMatch(&mut self, args: &ArgMatches);
+    fn analyse_match(&mut self, args: &ArgMatches);
     fn exe(&self);        
 }
 
@@ -50,31 +49,32 @@ struct IpExecutor {
 }
 
 impl IpExecutor {
-    fn queryLocation(&self)  {        
-        let ak = env::var("BAIDU_MAP_AK").expect("DATABASE_URL must be set");
-        let sk = env::var("BAIDU_MAP_SK").expect("sk")
-        println!("ak{}", ak);
-     
-        // baidu api https://api.map.baidu.com/location/ip?ak=您的AK&ip=您的IP&coor=bd09ll
-
-        let wholeStr = format!("/location/ip?ak={}&ip={}&coor={}{}", urlencoding::encode(ak), urlencoding::encode("11.238.18.36"),
+    fn query_location(&self)  {
+        // load source
+        let ak = env::var("BAIDU_MAP_AK").expect("expect ak");
+        let sk = env::var("BAIDU_MAP_SK").expect("expect sk");
+        let ip = "123.55.0.232";
+        
+        // baidu api https://api.map.baidu.com/location/ip?ak=您的AK&ip=您的IP&coor=bd09ll        
+        let whole_str = format!("/location/ip?ak={}&ip={}&coor={}{}", urlencoding::encode(&ak), urlencoding::encode(ip),
                 urlencoding::encode("bd09ll"),sk);
-
-        let tempStr = urlencoding::encode(wholeStr);
-        let digest = md5::compute(b"abcdefghijklmnopqrstuvwxyz");
+        let temp_str = urlencoding::encode(&whole_str);
+        let digest = md5::compute(temp_str);
         let sn = format!("{:x}", digest);
 
+        // format url
         let url = format!("https://api.map.baidu.com/location/ip?ak={}&ip={}&coor=bd09ll&sn={}",
                           ak, ip, sn);
-
-        // todo request
+        let body = reqwest::blocking::get(&url).unwrap()
+            .text().unwrap();
+        println!("body = {:?}", body);
     }
 }
 
 impl Executor for IpExecutor {
 
     // get args from command line
-    fn analyseMatch(&mut self, matches: &ArgMatches) {
+    fn analyse_match(&mut self, matches: &ArgMatches) {
         let address = matches.value_of("ADDRESS").unwrap();
         self.address = address.to_string();
     }
@@ -82,7 +82,6 @@ impl Executor for IpExecutor {
     // execute command
     fn exe(&self) {
         println!("ip is {}", self.address);
-        self.queryLocation();
-            
+        self.query_location();            
     }
 }
