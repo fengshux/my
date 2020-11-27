@@ -2,6 +2,7 @@
 extern crate clap;
 extern crate dotenv;
 extern crate urlencoding;
+extern crate serde_json;
 
 use std::env;
 use dotenv::dotenv;
@@ -53,7 +54,7 @@ impl IpExecutor {
         // load source
         let ak = env::var("BAIDU_MAP_AK").expect("expect ak");
         let sk = env::var("BAIDU_MAP_SK").expect("expect sk");
-        let ip = "123.55.0.232";
+        let ip = &self.address;
         
         // baidu api https://api.map.baidu.com/location/ip?ak=您的AK&ip=您的IP&coor=bd09ll        
         let whole_str = format!("/location/ip?ak={}&ip={}&coor={}{}", urlencoding::encode(&ak), urlencoding::encode(ip),
@@ -66,8 +67,9 @@ impl IpExecutor {
         let url = format!("https://api.map.baidu.com/location/ip?ak={}&ip={}&coor=bd09ll&sn={}",
                           ak, ip, sn);
         let body = reqwest::blocking::get(&url).unwrap()
-            .text().unwrap();
-        println!("body = {:?}", body);
+            .json::<serde_json::Value>().unwrap();
+        println!("{}, {}",  body["content"]["address_detail"]["province"].as_str().unwrap()
+                 , body["content"]["address_detail"]["city"].as_str().unwrap());
     }
 }
 
@@ -81,7 +83,6 @@ impl Executor for IpExecutor {
 
     // execute command
     fn exe(&self) {
-        println!("ip is {}", self.address);
         self.query_location();            
     }
 }
