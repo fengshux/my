@@ -8,6 +8,7 @@ use std::env;
 use dotenv::dotenv;
 use clap::{Arg, App, SubCommand, ArgMatches};
 
+
 fn main() {
     // load env
     dotenv().ok();
@@ -27,12 +28,12 @@ fn main() {
                     ))
         .get_matches();
 
-    // generate excutor
-    let executor = executor_factory(&matches);
-
-    // run excutor
-    executor.exe();
     
+    match executor_factory(&matches) {
+        Some(executor) => executor.exe(),
+        None => (),            
+    };
+
 }
 
 
@@ -40,7 +41,8 @@ trait Executor {
     fn exe(&self);
 }
 
-fn executor_factory(matches: &ArgMatches) -> Box<dyn Executor> {
+
+fn executor_factory(matches: &ArgMatches) -> Option<Box<dyn Executor>> {
     // handle subcommand ip;
     if let Some(matches) = matches.subcommand_matches("ip") {
         return IpExecutor::create(matches);
@@ -48,20 +50,18 @@ fn executor_factory(matches: &ArgMatches) -> Box<dyn Executor> {
 
     // default
     return DefaultExecutor::create(matches);
-
 }
 
 
 struct DefaultExecutor {
+    
 }
-
 impl DefaultExecutor {
     // get args from command line
-    fn create(matches: &ArgMatches) -> Box<DefaultExecutor> {
-        Box::new(DefaultExecutor{})
+    fn create(matches: &ArgMatches) -> Option<Box<DefaultExecutor>> {
+        Some(Box::new(DefaultExecutor{}))
     }
-}
-    
+}    
 impl Executor for DefaultExecutor {
     // execute command
     fn exe(&self) {
@@ -70,17 +70,14 @@ impl Executor for DefaultExecutor {
 }
 
 
-
-
 struct IpExecutor {
     address: String,
 }
-
 impl IpExecutor {
         // get args from command line
-    fn create(matches: &ArgMatches) -> Box<IpExecutor>{
+    fn create(matches: &ArgMatches) -> Option<Box<IpExecutor>>{
         let address = matches.value_of("ADDRESS").unwrap();
-        Box::new(IpExecutor{address:address.to_string()})
+        Some(Box::new(IpExecutor{address:address.to_string()}))
     }
     
     fn query_location(&self)  {
@@ -105,9 +102,7 @@ impl IpExecutor {
                  , body["content"]["address_detail"]["city"].as_str().unwrap());
     }
 }
-
 impl Executor for IpExecutor {
-
     // execute command
     fn exe(&self) {
         self.query_location();            
