@@ -24,25 +24,52 @@ fn main() {
                          .help("input standard ip output the location of ip")
                          .required(true)
                          .index(1)
-                         ))
+                    ))
         .get_matches();
 
+    // generate excutor
+    let executor = executor_factory(&matches);
 
-    // handle subcommand ip;
-    if let Some(matches) = matches.subcommand_matches("ip") {
-        let mut exe = IpExecutor{
-            address: "".to_string(),
-        };
-        exe.analyse_match(&matches);
-        exe.exe();
-    }
+    // run excutor
+    executor.exe();
+    
 }
 
 
 trait Executor {
-    fn analyse_match(&mut self, args: &ArgMatches);
-    fn exe(&self);        
+    fn exe(&self);
 }
+
+fn executor_factory(matches: &ArgMatches) -> Box<dyn Executor> {
+    // handle subcommand ip;
+    if let Some(matches) = matches.subcommand_matches("ip") {
+        return IpExecutor::create(matches);
+    }
+
+    // default
+    return DefaultExecutor::create(matches);
+
+}
+
+
+struct DefaultExecutor {
+}
+
+impl DefaultExecutor {
+    // get args from command line
+    fn create(matches: &ArgMatches) -> Box<DefaultExecutor> {
+        Box::new(DefaultExecutor{})
+    }
+}
+    
+impl Executor for DefaultExecutor {
+    // execute command
+    fn exe(&self) {
+        println!("Welcome!");
+    }   
+}
+
+
 
 
 struct IpExecutor {
@@ -50,6 +77,12 @@ struct IpExecutor {
 }
 
 impl IpExecutor {
+        // get args from command line
+    fn create(matches: &ArgMatches) -> Box<IpExecutor>{
+        let address = matches.value_of("ADDRESS").unwrap();
+        Box::new(IpExecutor{address:address.to_string()})
+    }
+    
     fn query_location(&self)  {
         // load source
         let ak = env::var("BAIDU_MAP_AK").expect("expect ak");
@@ -74,12 +107,6 @@ impl IpExecutor {
 }
 
 impl Executor for IpExecutor {
-
-    // get args from command line
-    fn analyse_match(&mut self, matches: &ArgMatches) {
-        let address = matches.value_of("ADDRESS").unwrap();
-        self.address = address.to_string();
-    }
 
     // execute command
     fn exe(&self) {
