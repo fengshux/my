@@ -10,9 +10,10 @@ use clap::{Arg, App, SubCommand, ArgMatches};
 
 
 fn main() {
-    // load env
+    // 加载环境变量
     dotenv().ok();
 
+    // 初始化appp
     let matches = App::new("My Super Program")
         .version("1.0")
         .author("xiaoyu xu. <xuxy@example.com>")
@@ -29,10 +30,8 @@ fn main() {
         .get_matches();
 
     
-    match executor_factory(&matches) {
-        Some(executor) => executor.exe(),
-        None => (),            
-    };
+    let executor = executor_factory(&matches);
+    executor.exe();
 
 }
 
@@ -42,30 +41,35 @@ trait Executor {
 }
 
 
-fn executor_factory(matches: &ArgMatches) -> Option<Box<dyn Executor>> {
+fn executor_factory(matches: &ArgMatches) -> Box<dyn Executor> {
     // handle subcommand ip;
     if let Some(matches) = matches.subcommand_matches("ip") {
-        return IpExecutor::create(matches);
+        return match IpExecutor::create(matches) {
+            Ok(executor) => executor,
+            Err(msg) => DefaultExecutor::create(msg),
+        };
     }
 
     // default
-    return DefaultExecutor::create(matches);
+    return DefaultExecutor::create("Welcome!".to_string());
 }
 
 
 struct DefaultExecutor {
-    
+    msg: String,
 }
 impl DefaultExecutor {
     // get args from command line
-    fn create(matches: &ArgMatches) -> Option<Box<DefaultExecutor>> {
-        Some(Box::new(DefaultExecutor{}))
+    fn create(msg: String) -> Box<DefaultExecutor> {
+        Box::new(DefaultExecutor{msg: msg})
     }
 }    
 impl Executor for DefaultExecutor {
     // execute command
     fn exe(&self) {
-        println!("Welcome!");
+        if self.msg.len() > 0 {
+            println!("{}", self.msg);
+        }        
     }   
 }
 
@@ -75,9 +79,12 @@ struct IpExecutor {
 }
 impl IpExecutor {
         // get args from command line
-    fn create(matches: &ArgMatches) -> Option<Box<IpExecutor>>{
+    fn create(matches: &ArgMatches) -> Result<Box<IpExecutor>, String>{
         let address = matches.value_of("ADDRESS").unwrap();
-        Some(Box::new(IpExecutor{address:address.to_string()}))
+
+        // TODO validate address
+        
+        Ok(Box::new(IpExecutor{address:address.to_string()}))
     }
     
     fn query_location(&self)  {
@@ -87,10 +94,9 @@ impl IpExecutor {
         let ip = &self.address;
         
         // baidu api https://api.map.baidu.com/location/ip?ak=您的AK&ip=您的IP&coor=bd09ll        
-        let whole_str = format!("/location/ip?ak={}&ip={}&coor={}{}", urlencoding::encode(&ak), urlencoding::encode(ip),
-                urlencoding::encode("bd09ll"),sk);
-        let temp_str = urlencoding::encode(&whole_str);
-        let digest = md5::compute(temp_str);
+        let whole_str = format!("/location/ip?ak={}&ip={}&coor={}{}", urlencoding::encode(&ak),
+                                urlencoding::encode(ip), urlencoding::encode("bd09ll"),sk);
+        let digest = md5::compute(urlencoding::encode(&whole_str));
         let sn = format!("{:x}", digest);
 
         // format url
