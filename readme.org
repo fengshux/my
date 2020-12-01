@@ -17,5 +17,5 @@ BAIDU_MAP_SK=yoursn
 使用方法
 #+begin_src 
 my ip 59.56.82.213
-// 省,市
+// 输出地理位置
 #+end_src
