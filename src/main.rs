@@ -42,7 +42,7 @@ trait Executor {
 
 
 fn executor_factory(matches: &ArgMatches) -> Box<dyn Executor> {
-    // handle subcommand ip;
+    // 处理子命令ip
     if let Some(matches) = matches.subcommand_matches("ip") {
         return match IpExecutor::create(matches) {
             Ok(executor) => executor,
@@ -50,7 +50,7 @@ fn executor_factory(matches: &ArgMatches) -> Box<dyn Executor> {
         };
     }
 
-    // default
+    // 命令的默认情况打印 Welcome!
     return DefaultExecutor::create("Welcome!".to_string());
 }
 
