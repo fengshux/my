@@ -14,3 +14,4 @@ md5 = "0.7.0"
 reqwest = { version = "0.10", features = ["blocking", "json"] }
 tokio = { version = "0.2", features = ["full"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+regex = "1"
