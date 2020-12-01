@@ -3,11 +3,12 @@ extern crate clap;
 extern crate dotenv;
 extern crate urlencoding;
 extern crate serde_json;
+extern crate regex;
 
 use std::env;
 use dotenv::dotenv;
 use clap::{Arg, App, SubCommand, ArgMatches};
-
+use regex::Regex;
 
 fn main() {
     // 加载环境变量
@@ -42,7 +43,7 @@ trait Executor {
 
 
 fn executor_factory(matches: &ArgMatches) -> Box<dyn Executor> {
-    // handle subcommand ip;
+    // 处理子命令ip
     if let Some(matches) = matches.subcommand_matches("ip") {
         return match IpExecutor::create(matches) {
             Ok(executor) => executor,
@@ -50,7 +51,7 @@ fn executor_factory(matches: &ArgMatches) -> Box<dyn Executor> {
         };
     }
 
-    // default
+    // 命令的默认情况打印 Welcome!
     return DefaultExecutor::create("Welcome!".to_string());
 }
 
@@ -82,15 +83,19 @@ impl IpExecutor {
     fn create(matches: &ArgMatches) -> Result<Box<IpExecutor>, String>{
         let address = matches.value_of("ADDRESS").unwrap();
 
-        // TODO validate address
-        
-        Ok(Box::new(IpExecutor{address:address.to_string()}))
+        // 验证地址是否为ip格式
+        let re = Regex::new(r"^((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})(\.((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})){3}$").unwrap();
+        if re.is_match(address) {
+            Ok(Box::new(IpExecutor{address:address.to_string()}))
+        } else {
+            Err(format!("Input {} is not a standard ip.",address))
+        }
     }
     
     fn query_location(&self)  {
         // load source
-        let ak = env::var("BAIDU_MAP_AK").expect("expect ak");
-        let sk = env::var("BAIDU_MAP_SK").expect("expect sk");
+        let ak = env::var("BAIDU_MAP_AK").expect("expect baidu ak");
+        let sk = env::var("BAIDU_MAP_SK").expect("expect baidu sk");
         let ip = &self.address;
         
         // baidu api https://api.map.baidu.com/location/ip?ak=您的AK&ip=您的IP&coor=bd09ll        
@@ -104,8 +109,12 @@ impl IpExecutor {
                           ak, ip, sn);
         let body = reqwest::blocking::get(&url).unwrap()
             .json::<serde_json::Value>().unwrap();
-        println!("{}, {}",  body["content"]["address_detail"]["province"].as_str().unwrap()
-                 , body["content"]["address_detail"]["city"].as_str().unwrap());
+       
+        if body["status"].as_i64() == Some(0) {
+            println!("{}", body["content"]["address"].as_str().unwrap());
+        } else {
+            println!("{}", body["message"].as_str().unwrap());
+        }        
     }
 }
 impl Executor for IpExecutor {
